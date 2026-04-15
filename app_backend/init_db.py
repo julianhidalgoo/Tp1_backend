@@ -6,7 +6,7 @@ with open("init_db.sql") as f:
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="root"
+    password="1234"
 )
 
 cursor = conn.cursor()

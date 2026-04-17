@@ -12,15 +12,39 @@ def listar_partidos():
     limit= request.args.get("_limit", 10, type=int)
     offset= request.args.get("_offset", 0, type=int)
 
+    #Capturo los parametros de la URL
+    equipo = request.args.get("equipo")
+    fecha = request.args.get("fecha")
+    fase = request.args.get("fase")
+
+    solicitud = "FROM partidos WHERE 1=1"
+    parametros = []
+    filtros_url = ""
+
+    if equipo: #Si manda algun equipo busco de local y visitante
+        solicitud += "AND equipo_local = %s OR equipo_visitante = %s"
+        parametros.extend([equipo, equipo]) #lo agrego 2 veces para los 2 %s
+        filtros_url += f"&equipo={equipo}"
+    if fecha:
+        solicitud += "AND fecha = %s"
+        parametros.append(fecha)
+        filtros_url += f"&fecha={fecha}"
+    if fase:
+        solicitud += "AND fase = %s"
+        parametros.append(fase)
+        filtros_url += f"&fase={fase}"
+
     if limit <= 0 or offset <0:
        cursor.close()
        conn.close()
        return errores(400,"Parametros invalidos","Bad Request")
     
-    cursor.execute("SELECT COUNT(*) AS total FROM partidos")
-    total= cursor.fetchone()["total"]
+    cursor.execute("SELECT COUNT(*) AS total {solicitud}", parametros)
+    total = cursor.fetchone()["total"]
 
-    cursor.execute("SELECT * FROM partidos LIMIT %s OFFSET %s", (limit, offset))
+    solicitud_partidos = f"SELECT id, equipo_local, equipo_visitante, fecha, fase {solicitud} LIMIT %s OFFSET %S"
+
+    cursor.execute(solicitud_partidos, parametros, [limit, offset])
     partidos = cursor.fetchall()
 
     cursor.close()
@@ -30,10 +54,10 @@ def listar_partidos():
     ultimo_offset= ((total-1)//limit) * limit if total > 0 else 0
 
     links={
-        "_first": {"href": f"{base_url}?_offset=0"},
-        "_prev": {"href": f"{base_url}?_offset={max(offset - limit, 0)}"},
-        "_next": {"href": f"{base_url}?_offset={min(offset + limit, ultimo_offset)}"},
-        "_last": {"href": f"{base_url}?_offset={ultimo_offset}"}
+    "_first": {"href": f"{base_url}?_offset=0&_limit={limit}{filtros_url}"},
+    "_prev": {"href": f"{base_url}?_offset={max(offset - limit, 0)}&_limit={limit}{filtros_url}"},
+    "_next": {"href": f"{base_url}?_offset={min(offset + limit, ultimo_offset)}&_limit={limit}{filtros_url}"},
+    "_last": {"href": f"{base_url}?_offset={ultimo_offset}&_limit={limit}{filtros_url}"}
     }
 
     if not partidos:

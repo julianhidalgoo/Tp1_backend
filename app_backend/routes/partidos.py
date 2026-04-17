@@ -1,25 +1,48 @@
 from flask import Blueprint,jsonify,request
 from app_backend.db import get_connection
-from app_backend.routes.auxiliar import es_id_valido,errores
+from app_backend.routes.auxiliar import es_id_valido,errores,es_gol_valido
 
 partidos_bp = Blueprint("partidos", __name__)
 
-@partidos_bp.route('/',methods=['GET'])  #Falta paginacion y manejo de error 400 404 y 500
+@partidos_bp.route('/',methods=['GET']) 
 def listar_partidos():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM partidos")
+
+    limit= request.args.get("_limit", 10, type=int)
+    offset= request.args.get("_offset", 0, type=int)
+
+    if limit <= 0 or offset <0:
+       cursor.close()
+       conn.close()
+       return errores(400,"Parametros invalidos","Bad Request")
+    
+    cursor.execute("SELECT COUNT(*) AS total FROM partidos")
+    total= cursor.fetchone()["total"]
+
+    cursor.execute("SELECT * FROM partidos LIMIT %s OFFSET %s", (limit, offset))
     partidos = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
+    base_url= request.base_url
+    ultimo_offset= ((total-1)//limit) * limit if total > 0 else 0
+
+    links={
+        "_first": {"href": f"{base_url}?_offset=0"},
+        "_prev": {"href": f"{base_url}?_offset={max(offset - limit, 0)}"},
+        "_next": {"href": f"{base_url}?_offset={min(offset + limit, ultimo_offset)}"},
+        "_last": {"href": f"{base_url}?_offset={ultimo_offset}"}
+    }
+
     if not partidos:
-        return jsonify("error, no hay contenido"), 204
-    return jsonify(partidos), 200
+        return "",204
+    return jsonify({ "partidos": partidos,
+                    "_links": links}), 200
 
 
-
-@partidos_bp.route('/', methods=['POST'])   #Falta manejo de error 409 y 500
+@partidos_bp.route('/', methods=['POST'])  
 def crear_partidos():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -29,12 +52,24 @@ def crear_partidos():
 
     for campo in campos_requeridos:
         if campo not in datos:
-            return jsonify({"Error": f"falta completar el campo {campo}"}), 400
+            cursor.close()
+            conn.close()
+            return errores(400,"Falta Completar algun campo","Bad Request")
         
     equipo_local = datos.get("equipo_local")
     equipo_visitante = datos.get("equipo_visitante")
     fecha = datos.get("fecha")
     fase = datos.get("fase")
+
+    cursor.execute("""
+                   SELECT COUNT(*) AS total FROM partidos WHERE equipo_local = %s AND equipo_visitante = %s AND fecha = %s""",(equipo_local,equipo_visitante,fecha))
+    existe = cursor.fetchone()["total"]
+
+    if existe > 0:
+        cursor.close()
+        conn.close()
+        return errores(409,"Partido ya existente","Conflict")
+        
 
     cursor.execute("""
                    INSERT INTO partidos (equipo_local, equipo_visitante, fecha, fase)
@@ -45,10 +80,10 @@ def crear_partidos():
     cursor.close()
     conn.close()
 
-    return jsonify({"Mensaje": "Partido agregado correctamente"}), 201   
+    return errores(201,"Partido agregado correctamente","Created")
 
 
-@partidos_bp.route('/<int:id>', methods=['GET'])    #500  (valida el 400 en el <int:id>)
+@partidos_bp.route('/<int:id>', methods=['GET'])  # (valida el 400 en el <int:id>) AGREGAR EL ES_ID_VALIDO y ver que sea un digito
 def buscar_partido_id(id):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -60,24 +95,28 @@ def buscar_partido_id(id):
     conn.close()
     
     if not partido:
-        return jsonify({"Error": "Partido no encontrado"}), 404
-    return jsonify(partido), 200
+        return errores(404,"Partido no encontrado","Not Found")
+    return jsonify({"Partido": partido}), 200
 
 
-@partidos_bp.route('/<int:id_buscado>', methods=['PUT'])  # 500
+@partidos_bp.route('/<int:id_buscado>', methods=['PUT'])
 def reemplazar_partido(id_buscado):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     datos = request.json
 
     if not es_id_valido(id_buscado):
-        return jsonify({"Error": "Partido no existente"}), 404
+        cursor.close()
+        conn.close()
+        return errores(404,"Partido no existente","Not Found")
 
     campos_requeridos = ["equipo_local","equipo_visitante","fecha","fase"]
 
     for campo in campos_requeridos:
         if campo not in datos:
-            return jsonify({"Error": f"falta completar el campo {campo}"}), 400
+            cursor.close()
+            conn.close()
+            return errores(400,"Falta completar alguno de los campos","Bad Request")
 
 
     local_nuevo = datos.get("equipo_local")
@@ -96,29 +135,45 @@ def reemplazar_partido(id_buscado):
 
     return "",204
 
-##TERMINAR
 
-# @partidos_bp.route('/partidos/<int:id_buscado>', methods=['PATCH'])
-# def actualizar_partido_parcialmente(id_buscado):
-#     conn = get_connection()
-#     cursor = conn.cursor(dictionary=True)
-#     datos = request.json
+@partidos_bp.route('/<int:id_buscado>', methods=['PATCH'])
+def actualizar_partido_parcialmente(id_buscado):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    datos = request.json
 
-#     cursor.execute("""
-#                  SELECT id FROM partidos WHERE id = %s """, (id_buscado))
-#     partido_existente = cursor.fetchone()
+    if not es_id_valido(id_buscado):
+        cursor.close()
+        conn.close()
+        return errores(404,"Id no encontrado","Not found")
 
-#     if not partido_existente:
-#         cursor.close()
-#         conn.close()
-#         return jsonify({"Error": f"No existe el ID buscado"}), 404
+    campos_posibles = ["equipo_local","equipo_visitante","fecha","fase"]
 
-#     for columna_enviada, valor in datos:
-#         cursor.execute("""
-#                        UPDATE partidos SET {columna_enviada} = {valor} WHERE id = %s """, (id_buscado))
-      
+    claves = []
+    valores = []
 
-        
+    for campo in campos_posibles:
+        if campo in datos:
+            claves.append(f"{campo} = %s")
+            valores.append(datos[campo])
+
+    if not claves:
+        cursor.close()
+        conn.close()
+        return errores(400, "No se enviaron campos para actualizar", "Bad request")
+
+    claves_recibidas = ", ".join(claves)
+
+    instruccion_a_ejecutar = f"UPDATE partidos SET {claves_recibidas} WHERE id = %s"
+    valores.append(id_buscado)
+
+    cursor.execute(instruccion_a_ejecutar, valores)
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return "", 204
     
         
 @partidos_bp.route('/<int:id_a_eliminar>', methods=['DELETE']) #(suponemos que el int valida automaticamente el 400)
@@ -127,7 +182,9 @@ def eliminar_partido(id_a_eliminar):
     cursor = conn.cursor(dictionary=True)
 
     if not es_id_valido(id_a_eliminar):
-        return jsonify({"Error": "Partido no existente"}), 404
+        cursor.close()
+        conn.close()
+        return errores(404,"Partido no existente","Not Found")
     
     cursor.execute("""
                    DELETE FROM partidos WHERE id = %s """,(id_a_eliminar,))
@@ -150,7 +207,7 @@ def actualizar_resultado(id_a_actualizar):
     if not es_id_valido(id_a_actualizar):
         cursor.close()
         conn.close()
-        return jsonify({"Error": "Partido no existente"}), 404
+        return errores(404,"Partido no existente","Not Found")
     
     campos_requeridos = ["goles_local","goles_visitante"]
 
@@ -158,12 +215,18 @@ def actualizar_resultado(id_a_actualizar):
         if campo not in datos:
              cursor.close()
              conn.close()
-             return jsonify({"Error": f"falta completar el campo {campo}"}), 400
+             return errores(400,"Falta completar alguno de los campos","Bad Request")
 
 
     goles_local_nuevo = datos.get("goles_local")
     goles_visitante_nuevo = datos.get("goles_visitante")
 
+    if not es_gol_valido(goles_local_nuevo,goles_visitante_nuevo) or goles_local_nuevo < 0 or goles_visitante_nuevo < 0:
+        cursor.close()
+        conn.close()
+        return errores(400, "Error en el formato de los goles > 0 y de tipo entero", "Bad Request")
+    
+    
     cursor.execute("""
                    UPDATE partidos SET goles_local = %s, goles_visitante = %s
                    WHERE id = %s """,(goles_local_nuevo,goles_visitante_nuevo,id_a_actualizar))

@@ -22,15 +22,15 @@ def listar_partidos():
     filtros_url = ""
 
     if equipo: #Si manda algun equipo busco de local y visitante
-        solicitud += "AND equipo_local = %s OR equipo_visitante = %s"
+        solicitud += " AND (equipo_local = %s OR equipo_visitante = %s)"
         parametros.extend([equipo, equipo]) #lo agrego 2 veces para los 2 %s
         filtros_url += f"&equipo={equipo}"
     if fecha:
-        solicitud += "AND fecha = %s"
+        solicitud += " AND fecha = %s"
         parametros.append(fecha)
         filtros_url += f"&fecha={fecha}"
     if fase:
-        solicitud += "AND fase = %s"
+        solicitud += " AND fase = %s"
         parametros.append(fase)
         filtros_url += f"&fase={fase}"
 
@@ -39,12 +39,12 @@ def listar_partidos():
        conn.close()
        return errores(400,"Parametros invalidos","Bad Request")
     
-    cursor.execute("SELECT COUNT(*) AS total {solicitud}", parametros)
+    cursor.execute(f"SELECT COUNT(*) AS total {solicitud}", parametros)
     total = cursor.fetchone()["total"]
 
-    solicitud_partidos = f"SELECT id, equipo_local, equipo_visitante, fecha, fase {solicitud} LIMIT %s OFFSET %S"
+    solicitud_partidos = f"SELECT id, equipo_local, equipo_visitante, fecha, fase {solicitud} LIMIT %s OFFSET %s"
 
-    cursor.execute(solicitud_partidos, parametros, [limit, offset])
+    cursor.execute(solicitud_partidos, parametros + [limit, offset])
     partidos = cursor.fetchall()
 
     cursor.close()
@@ -120,7 +120,7 @@ def buscar_partido_id(id):
     
     if not partido:
         return errores(404,"Partido no encontrado","Not Found")
-    return jsonify({"Partido": partido}), 200
+    return jsonify(partido), 200
 
 
 @partidos_bp.route('/<int:id_buscado>', methods=['PUT'])
@@ -233,7 +233,7 @@ def actualizar_resultado(id_a_actualizar):
         conn.close()
         return errores(404,"Partido no existente","Not Found")
     
-    campos_requeridos = ["goles_local","goles_visitante"]
+    campos_requeridos = ["local","visitante"]
 
     for campo in campos_requeridos:
         if campo not in datos:
@@ -242,8 +242,8 @@ def actualizar_resultado(id_a_actualizar):
              return errores(400,"Falta completar alguno de los campos","Bad Request")
 
 
-    goles_local_nuevo = datos.get("goles_local")
-    goles_visitante_nuevo = datos.get("goles_visitante")
+    goles_local_nuevo = datos.get("local")
+    goles_visitante_nuevo = datos.get("visitante")
 
     if not es_gol_valido(goles_local_nuevo,goles_visitante_nuevo) or goles_local_nuevo < 0 or goles_visitante_nuevo < 0:
         cursor.close()

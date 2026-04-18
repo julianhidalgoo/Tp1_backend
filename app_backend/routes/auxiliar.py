@@ -22,7 +22,16 @@ def es_id_valido(id):
     
     
 def errores(codigo,mensaje,descripcion):
-    return jsonify({"Errors": [{"code": codigo, "menssage": mensaje, "description": descripcion, "level": "error"}]}), codigo
+    return jsonify({
+        "errors": [
+            {
+                "code": codigo,
+                "message": mensaje,
+                "description": descripcion,
+                "level": "error"
+            }
+        ]
+    }), codigo
 
 
 def es_gol_valido(goles_local,goles_visitante):

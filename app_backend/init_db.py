@@ -1,6 +1,6 @@
 import mysql.connector
 
-with open("init_db.sql") as f:
+with open("app_backend/init_db.sql") as f:
     sql = f.read()
 
 conn = mysql.connector.connect(

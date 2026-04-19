@@ -110,7 +110,7 @@ def crear_partidos():
     cursor.close()
     conn.close()
 
-    return errores(201,"Partido agregado correctamente","Created")
+    return "Created.",201
 
 
 @partidos_bp.route('/<int:id>', methods=['GET'])  # (valida el 400 en el <int:id>) AGREGAR EL ES_ID_VALIDO y ver que sea un digito
@@ -316,8 +316,28 @@ def registrar_prediccion(id):
     
     local = datos.get("local")
     visitante = datos.get("visitante")
+
+    cursor.execute("""
+                    SELECT * FROM partidos WHERE goles_local = NULL AND id = %s
+
+                    """(id,)
+    )
     
+    partido_no_jugado = cursor.fetchone()
+
+    if not partido_no_jugado:
+        return errores(400, "Partido Finalizado", "Bad request")
     
+    cursor.execute("""
+                    SELECT * FROM predicciones WHERE hizo_prediccion = 1 AND id_usuario = %s AND id_partido = %s
+                   """ (id_usuario,id,)
+    )
+
+
+
+
+    
+        
 
     
     

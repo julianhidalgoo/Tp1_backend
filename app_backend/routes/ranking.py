@@ -1,6 +1,6 @@
 from flask import jsonify, request, Blueprint
 from db import get_connection
-from app_backend.routes.auxiliar import es_id_valido,errores
+from app_backend.routes.auxiliar import es_id_valido_usuarios,errores
 
 ranking_bp = Blueprint("ranking",__name__)
 
@@ -11,21 +11,21 @@ def mostrar_puntaje():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except:
-        return jsonify({"errors":[errors[3]]}),500
+        errores(500, "Error interno con la base de datos", "Internal server error")
 
     #paginacion, muestra los datos divididos por la cantidad especificada en limit
-    limit= request.args.get("_limit", 2, type=int)
+    limit= request.args.get("_limit", 10, type=int)
     offset= request.args.get("_offset", 0, type=int)
 
     if limit <= 0 or offset <0:
             cursor.close()
             conn.close()
-            return jsonify({"errors":errors[0]}), 400
+            errores(400, "Url no encontrada", "Bad Request")
     cursor.execute("SELECT COUNT(*) AS total FROM ranking")
     total= cursor.fetchone()["total"]
 
     if not total:
-            return jsonify(),204
+            return "",204
 
     cursor.execute("SELECT * FROM ranking LIMIT %s OFFSET %s", (limit, offset))
     usuarios_con_puntaje = cursor.fetchall()

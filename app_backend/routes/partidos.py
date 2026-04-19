@@ -321,7 +321,7 @@ def registrar_prediccion(id):
     visitante = datos.get("visitante")
 
     cursor.execute("""
-                    SELECT * FROM partidos WHERE goles_local = NULL AND id = %s
+                    SELECT * FROM partidos WHERE goles_local IS NULL AND id = %s
 
                     """,(id,)
     )
@@ -354,26 +354,3 @@ def registrar_prediccion(id):
     conn.close()
 
     return jsonify({"mensaje": "Predicción creada con éxito"}), 201
-
-
-    
-
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

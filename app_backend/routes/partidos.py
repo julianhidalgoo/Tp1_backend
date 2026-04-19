@@ -353,4 +353,6 @@ def registrar_prediccion(id):
     cursor.close()
     conn.close()
 
-    return jsonify({"mensaje": "Predicción creada con éxito"}), 201
+    return jsonify({"id_usuario": id_usuario,
+                    "local": pred_local,
+                    "visitante": pred_visitante}), 201

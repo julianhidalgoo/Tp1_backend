@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS predicciones(
     hizo_prediccion TINYINT DEFAULT 0,
     goles_local INT DEFAULT 0,
     goles_visitante INT DEFAULT 0,
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (id_partido) REFERENCES partidos(id) ON DELETE CASCADE
 );
 
@@ -69,8 +69,8 @@ INSERT INTO partidos (equipo_local, equipo_visitante, fecha, fase, goles_local, 
 ('Senegal', 'Ghana', '2026-07-11', 'grupo', 1, 0),
 ('Costa de Marfil', 'Argelia', '2026-07-12', 'grupo', 2, 1),
 
-('Qatar', 'Emiratos Árabes', '2026-07-13', 'grupo'),
-('Irán', 'Irak', '2026-07-14', 'grupo',,NULL,NULL),
+('Qatar', 'Emiratos Árabes', '2026-07-13', 'grupo',NULL,NULL),
+('Irán', 'Irak', '2026-07-14', 'grupo',NULL,NULL),
 ('China', 'India', '2026-07-15', 'grupo',NULL,NULL),
 ('Nueva Zelanda', 'Fiyi', '2026-07-16', 'grupo',NULL,NULL),
 ('Panamá', 'Honduras', '2026-07-17', 'grupo',NULL,NULL),

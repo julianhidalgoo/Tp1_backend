@@ -1,5 +1,5 @@
 from flask import jsonify, request, Blueprint
-from db import get_connection
+from app_backend.db import get_connection
 from app_backend.routes.auxiliar import es_id_valido_usuarios,errores
 
 

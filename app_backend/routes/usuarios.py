@@ -11,7 +11,7 @@ def listar_usuarios():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
 
     #paginacion, muestra los datos divididos por la cantidad especificada en limit
     limit= request.args.get("_limit", 10, type=int)
@@ -20,7 +20,7 @@ def listar_usuarios():
     if limit <= 0 or offset <0:
             cursor.close()
             conn.close()
-            errores(400, "Url no encontrada", "Bad Request")
+            return errores(400, "Url no encontrada", "Bad Request")
     cursor.execute("SELECT COUNT(*) AS total FROM usuarios")
     total= cursor.fetchone()["total"]
 
@@ -52,7 +52,7 @@ def agregar_usuario():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except:
-         errores(500, "Error interno con la base de datos", "Internal server error")
+         return errores(500, "Error interno con la base de datos", "Internal server error")
 
 
     datos = request.json
@@ -69,13 +69,13 @@ def agregar_usuario():
     email = datos.get("email")
     
     cursor.execute("""
-                        SELECT 1 FROM usuarios WHERE email == %s 
+                        SELECT 1 FROM usuarios WHERE email = %s 
                     """,(email,)
                 )
     usuario_existe = cursor.fetchone()
 
     if usuario_existe:
-        errores(409, "El usuario ya existe", "Conflict")
+        return errores(409, "El usuario ya existe", "Conflict")
     
 
     cursor.execute("""INSERT INTO usuarios(nombre,email)VALUES(%s, %s)""",(nombre,email))
@@ -90,15 +90,15 @@ def obtener_usuario_por_id(id):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
    
     if type(id)!= int or id <= 0:
-        errores(404,"No se encuentra la URL", "Not Found")
+        return errores(404,"No se encuentra la URL", "Not Found")
 
     es_valido = es_id_valido_usuarios(id)
     
     if not es_valido:
-        errores(400, "No se encontró el usuario", "Bad Request")
+        return errores(400, "No se encontró el usuario", "Bad Request")
     
     cursor.execute("SELECT * FROM usuarios WHERE id = %s",(id,))
     usuario_existe= cursor.fetchone()
@@ -113,7 +113,7 @@ def reemplazar_usuario_por_id(id):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except: 
-        errores(500, "Error interno con la base de datos", "Internal server error")
+       return errores(500, "Error interno con la base de datos", "Internal server error")
 
     datos = request.json
     
@@ -129,13 +129,13 @@ def reemplazar_usuario_por_id(id):
     email = datos.get("email")
 
     cursor.execute("""
-                        SELECT 1 FROM usuarios WHERE email == %s AND nombre == %s
+                        SELECT 1 FROM usuarios WHERE email = %s AND nombre = %s
                     """,(email,nombre,)
                 )
     usuario_existe = cursor.fetchone()
 
     if usuario_existe:
-        errores(409, "El usuario ya existe", "Conflict")
+       return errores(409, "El usuario ya existe", "Conflict")
     
     cursor.execute( """UPDATE usuarios SET nombre = %s, email = %s WHERE id = %s """,(nombre,email,id,))
     conn.commit()
@@ -149,15 +149,15 @@ def borrar_usuario(id):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
     
     if type(id)!= int or id <= 0:
-        errores(404,"No se encuentra la URL", "Not Found")
+       return errores(404,"No se encuentra la URL", "Not Found")
 
     es_valido = es_id_valido_usuarios(id)
     
     if not es_valido:
-        errores(400, "No se encontró el usuario", "Bad Request")
+        return errores(400, "No se encontró el usuario", "Bad Request")
    
     cursor.execute("""DELETE FROM usuarios WHERE id = %s""",(id,))
     conn.commit()

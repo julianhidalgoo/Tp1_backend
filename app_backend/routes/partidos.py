@@ -282,36 +282,39 @@ def actualizar_resultado(id_a_actualizar):
     return "", 204
 
 
-
 @partidos_bp.route ("/<int:id>/prediccion", methods = ["POST"])
 def registrar_prediccion(id):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
 
     datos = request.json
 
-    campos_requeridos = ["id_usuarios","local","visitante"]
+    campos_requeridos = ["id_usuario","local","visitante"]
 
     for campo in campos_requeridos:
         if campo not in datos:
-            conn.close()
             cursor.close()
+            conn.close()
             return errores(400, "Falta completar algun campo", "Bad request")
 
+    # Verifico si el partido existe y si ya se jugo
+    # Tuve que sacar es_id_valido pq tambien tenia que trabajar con el resultado del partido
+    cursor.execute("SELECT goles_local, goles_visitante FROM partidos WHERE id = %s", (id,))
+    partido = cursor.fetchone()
+
+    if not partido:
+        return errores(404, "Partido no encontrado", "Not Found")
     
-    if not es_id_valido(id):
-        conn.close()
-        cursor.close()
-        return errores(404, "Partido Inexistente", "Not found")
+    if partido["goles_local"] is not None:
+        return errores(400, "Acción no permitida, Partido Finalizado.", "Bad Request")
     
     id_usuario = datos.get("id_usuario")
-    
     if not es_id_valido_usuarios(id_usuario):
-        conn.close()
         cursor.close()
+        conn.close()
         return errores(404, "Usuario inexistente", "Not found")
     
     local = datos.get("local")
@@ -320,7 +323,7 @@ def registrar_prediccion(id):
     cursor.execute("""
                     SELECT * FROM partidos WHERE goles_local = NULL AND id = %s
 
-                    """(id,)
+                    """,(id,)
     )
     
     partido_no_jugado = cursor.fetchone()
@@ -330,14 +333,30 @@ def registrar_prediccion(id):
     
     cursor.execute("""
                     SELECT * FROM predicciones WHERE hizo_prediccion = 1 AND id_usuario = %s AND id_partido = %s
-                   """ (id_usuario,id,)
+                   """ ,(id_usuario,id,)
     )
+        
+    pred_visitante = datos.get("visitante")
+    pred_local = datos.get("local")
 
+    #Verifico si ya existe una predicción
+    cursor.execute("SELECT 1 FROM predicciones WHERE id_usuario = %s AND id_partido = %s", (id_usuario, id))
+    if cursor.fetchone():
+        return errores(409, "El usuario ya realizó una predicción para este partido", "Conflict")
+    
+    #Inserto la prediccion
+    cursor.execute("""
+            INSERT INTO predicciones (id_usuario, id_partido, goles_local, goles_visitante, hizo_prediccion)
+            VALUES (%s, %s, %s, %s, 1)
+        """, (id_usuario, id, pred_local, pred_visitante))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
+    return jsonify({"mensaje": "Predicción creada con éxito"}), 201
 
 
     
-        
 
     
     

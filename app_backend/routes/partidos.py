@@ -1,6 +1,6 @@
 from flask import Blueprint,jsonify,request
 from app_backend.db import get_connection
-from app_backend.routes.auxiliar import es_id_valido,errores,es_gol_valido
+from app_backend.routes.auxiliar import es_id_valido, es_id_valido_usuarios,errores,es_gol_valido
 
 partidos_bp = Blueprint("partidos", __name__)
 
@@ -280,6 +280,51 @@ def actualizar_resultado(id_a_actualizar):
     conn.close()
 
     return "", 204
+
+
+
+@partidos_bp.route ("/<int:id>/prediccion", methods = ["POST"])
+def registrar_prediccion(id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
+
+    datos = request.json
+
+    campos_requeridos = ["id_usuarios","local","visitante"]
+
+    for campo in campos_requeridos:
+        if campo not in datos:
+            conn.close()
+            cursor.close()
+            return errores(400, "Falta completar algun campo", "Bad request")
+
+    
+    if not es_id_valido(id):
+        conn.close()
+        cursor.close()
+        return errores(404, "Partido Inexistente", "Not found")
+    
+    id_usuario = datos.get("id_usuario")
+    
+    if not es_id_valido_usuarios(id_usuario):
+        conn.close()
+        cursor.close()
+        return errores(404, "Usuario inexistente", "Not found")
+    
+    local = datos.get("local")
+    visitante = datos.get("visitante")
+    
+    
+
+    
+    
+    
+
+
+
 
 
 

@@ -1,5 +1,7 @@
+DROP DATABASE IF EXISTS fixture;
 CREATE DATABASE IF NOT EXISTS fixture;
 USE fixture;
+
 
 CREATE TABLE IF NOT EXISTS partidos (
     id INTEGER AUTO_INCREMENT PRIMARY KEY,
@@ -7,8 +9,30 @@ CREATE TABLE IF NOT EXISTS partidos (
     equipo_visitante VARCHAR(50) NOT NULL,
     fecha DATETIME NOT NULL,
     fase VARCHAR(50) NOT NULL,
-    goles_local INTEGER,
-    goles_visitante INTEGER
+    goles_local INTEGER DEFAULT NULL,
+    goles_visitante INTEGER DEFAULT NULL,
+);
+
+CREATE TABLE IF NOT EXISTS usuarios(
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre varchar(100) NOT NULL,
+    email varchar(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ranking(
+    id_usuario INT,
+    puntos INT NULL DEFAULT 0,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS predicciones(
+    id_usuario INT,
+    id_partido INT,
+    hizo_prediccion TINYINT DEFAULT 0,
+    goles_local INT DEFAULT 0,
+    goles_visitante INT DEFAULT 0,
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id) ON DELETE CASCADE
+    FOREIGN KEY (id_partido) REFERENCES partidos(id) ON DELETE CASCADE
 );
 
 INSERT INTO partidos (equipo_local, equipo_visitante, fecha, fase, goles_local, goles_visitante) VALUES
@@ -45,25 +69,38 @@ INSERT INTO partidos (equipo_local, equipo_visitante, fecha, fase, goles_local, 
 ('Senegal', 'Ghana', '2026-07-11', 'grupo', 1, 0),
 ('Costa de Marfil', 'Argelia', '2026-07-12', 'grupo', 2, 1),
 
-('Qatar', 'Emiratos Árabes', '2026-07-13', 'grupo', NULL, NULL),
-('Irán', 'Irak', '2026-07-14', 'grupo', NULL, NULL),
-('China', 'India', '2026-07-15', 'grupo', NULL, NULL),
-('Nueva Zelanda', 'Fiyi', '2026-07-16', 'grupo', NULL, NULL),
-('Panamá', 'Honduras', '2026-07-17', 'grupo', NULL, NULL),
-('El Salvador', 'Guatemala', '2026-07-18', 'grupo', NULL, NULL),
-('Ecuador', 'Venezuela', '2026-07-19', 'grupo', NULL, NULL),
-('Sudáfrica', 'Túnez', '2026-07-20', 'grupo', NULL, NULL),
-('Camerún', 'Nigeria', '2026-07-21', 'grupo', NULL, NULL),
-('Egipto', 'Marruecos', '2026-07-22', 'grupo', NULL, NULL),
+('Qatar', 'Emiratos Árabes', '2026-07-13', 'grupo'),
+('Irán', 'Irak', '2026-07-14', 'grupo',),
+('China', 'India', '2026-07-15', 'grupo'),
+('Nueva Zelanda', 'Fiyi', '2026-07-16', 'grupo'),
+('Panamá', 'Honduras', '2026-07-17', 'grupo'),
+('El Salvador', 'Guatemala', '2026-07-18', 'grupo'),
+('Ecuador', 'Venezuela', '2026-07-19', 'grupo'),
+('Sudáfrica', 'Túnez', '2026-07-20', 'grupo', N),
+('Camerún', 'Nigeria', '2026-07-21', 'grupo'),
+('Egipto', 'Marruecos', '2026-07-22', 'grupo'),
 
 ('Suiza', 'Dinamarca', '2026-07-23', 'octavos', 2, 1),
 ('Grecia', 'Irlanda', '2026-07-24', 'octavos', 1, 0),
 ('Polonia', 'Hungría', '2026-07-25', 'octavos', 3, 2),
 ('Senegal', 'Costa de Marfil', '2026-07-26', 'octavos', 2, 2),
-('Qatar', 'Irán', '2026-07-27', 'octavos', NULL, NULL),
-('China', 'Nueva Zelanda', '2026-07-28', 'octavos', NULL, NULL),
-('Panamá', 'Ecuador', '2026-07-29', 'octavos', NULL, NULL),
-('Sudáfrica', 'Camerún', '2026-07-30', 'octavos', NULL, NULL),
+('Qatar', 'Irán', '2026-07-27', 'octavos'),
+('China', 'Nueva Zelanda', '2026-07-28', 'octavos'),
+('Panamá', 'Ecuador', '2026-07-29', 'octavos'),
+('Sudáfrica', 'Camerún', '2026-07-30', 'octavos'),
 
 ('Suiza', 'Grecia', '2026-07-31', 'cuartos', 1, 0),
 ('Polonia', 'Senegal', '2026-08-01', 'cuartos', 2, 1);
+
+
+INSERT INTO usuarios(nombre, email) values
+("Javi","Javi@fi.uba.ar"),
+("Marcos ","Marcos@fi.uba.ar"),
+("Lucas","Lucas@fi.uba.ar"),
+("Sofia","Sofia@fi.uba.ar");
+
+INSERT INTO ranking(id_usuario) values
+(1),
+(2),
+(3),
+(4);

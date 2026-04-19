@@ -19,6 +19,25 @@ def es_id_valido(id):
     conn.close()
     
     return True
+
+def es_id_valido_usuarios(id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+                   SELECT 1 FROM usuarios WHERE id = %s """,(id,))
+    usuario = cursor.fetchone()
+
+    if not usuario:
+        cursor.close()
+        conn.close()
+        return False
+    
+    cursor.close()
+    conn.close()
+    
+    return True
+    
     
     
 def errores(codigo,mensaje,descripcion):

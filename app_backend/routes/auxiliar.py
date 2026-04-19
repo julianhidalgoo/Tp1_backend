@@ -38,3 +38,6 @@ def es_gol_valido(goles_local,goles_visitante):
     if isinstance(goles_local,int) and isinstance(goles_visitante,int):
         return True
     return False
+
+
+

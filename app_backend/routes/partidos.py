@@ -6,8 +6,11 @@ partidos_bp = Blueprint("partidos", __name__)
 
 @partidos_bp.route('/',methods=['GET']) 
 def listar_partidos():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
 
     limit= request.args.get("_limit", 10, type=int)
     offset= request.args.get("_offset", 0, type=int)
@@ -68,8 +71,11 @@ def listar_partidos():
 
 @partidos_bp.route('/', methods=['POST'])  
 def crear_partidos():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
     datos = request.json
   
     campos_requeridos = ["equipo_local","equipo_visitante","fecha","fase"]
@@ -109,8 +115,11 @@ def crear_partidos():
 
 @partidos_bp.route('/<int:id>', methods=['GET'])  # (valida el 400 en el <int:id>) AGREGAR EL ES_ID_VALIDO y ver que sea un digito
 def buscar_partido_id(id):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
 
     cursor.execute("SELECT * FROM partidos WHERE id = %s",(id,))
     partido = cursor.fetchone()
@@ -125,8 +134,11 @@ def buscar_partido_id(id):
 
 @partidos_bp.route('/<int:id_buscado>', methods=['PUT'])
 def reemplazar_partido(id_buscado):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
     datos = request.json
 
     if not es_id_valido(id_buscado):
@@ -162,8 +174,11 @@ def reemplazar_partido(id_buscado):
 
 @partidos_bp.route('/<int:id_buscado>', methods=['PATCH'])
 def actualizar_partido_parcialmente(id_buscado):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
     datos = request.json
 
     if not es_id_valido(id_buscado):
@@ -202,8 +217,11 @@ def actualizar_partido_parcialmente(id_buscado):
         
 @partidos_bp.route('/<int:id_a_eliminar>', methods=['DELETE']) #(suponemos que el int valida automaticamente el 400)
 def eliminar_partido(id_a_eliminar):
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
 
     if not es_id_valido(id_a_eliminar):
         cursor.close()
@@ -223,9 +241,11 @@ def eliminar_partido(id_a_eliminar):
 
 @partidos_bp.route('/<int:id_a_actualizar>/resultado', methods=['PUT'])
 def actualizar_resultado(id_a_actualizar):
-
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+    except Exception:
+        errores(500, "Error interno con la base de datos", "Internal server error")
     datos = request.json    
 
     if not es_id_valido(id_a_actualizar):

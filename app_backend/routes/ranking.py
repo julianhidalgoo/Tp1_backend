@@ -11,7 +11,7 @@ def mostrar_puntaje():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
 
     #paginacion, muestra los datos divididos por la cantidad especificada en limit
     limit= request.args.get("_limit", 10, type=int)
@@ -20,7 +20,7 @@ def mostrar_puntaje():
     if limit <= 0 or offset <0:
             cursor.close()
             conn.close()
-            errores(400, "Url no encontrada", "Bad Request")
+            return errores(400, "Url no encontrada", "Bad Request")
     cursor.execute("SELECT COUNT(*) AS total FROM ranking")
     total= cursor.fetchone()["total"]
 

@@ -176,19 +176,18 @@ def actualizar_partido_parcialmente(id_buscado):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
+    
     datos = request.json
 
     if not es_id_valido(id_buscado):
         cursor.close()
         conn.close()
-        return errores(404,"Id no encontrado","Not found")
+        return errores(404, "Id no encontrado", "Not found")
 
-    cursor.execute("""SELECT * FROM predicciones WHERE id_partido=%s""", (id_buscado,))
-    prediccion= cursor.fetchone()
-    campos_posibles = ["equipo_local","equipo_visitante","fecha","fase"]
-
-    campos_requeridos=["id","equipo_local","equipo_visitante","fecha","fase","goles_local"]
+    campos_posibles = ["equipo_local", "equipo_visitante", "fecha", "fase"]
+    claves = []
+    valores = []
 
     for campo in campos_posibles:
         if campo in datos:
@@ -200,23 +199,16 @@ def actualizar_partido_parcialmente(id_buscado):
         conn.close()
         return errores(400, "No se enviaron campos para actualizar", "Bad request")
 
-    claves_recibidas = ", ".join(claves)
-
-    instruccion_a_ejecutar = f"UPDATE partidos SET {claves_recibidas} WHERE id = %s"
     valores.append(id_buscado)
-
-    cursor.execute(instruccion_a_ejecutar, valores)
+    cursor.execute(f"UPDATE partidos SET {', '.join(claves)} WHERE id = %s", valores)
     conn.commit()
-    if prediccion["hizo_prediccion"]==1:
-        return "", actualizar_puntos(prediccion["id_usuario"], id_buscado)
-
     cursor.close()
     conn.close()
-
     return "", 204
+
     
         
-@partidos_bp.route('/<int:id_a_eliminar>', methods=['DELETE']) #(suponemos que el int valida automaticamente el 400)
+@partidos_bp.route('/<int:id_a_eliminar>', methods=['DELETE'])
 def eliminar_partido(id_a_eliminar):
     try:
         conn = get_connection()
@@ -245,40 +237,42 @@ def actualizar_resultado(id_a_actualizar):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
-    datos = request.json    
+        return errores(500, "Error interno con la base de datos", "Internal server error")
+    
+    datos = request.json
 
     if not es_id_valido(id_a_actualizar):
         cursor.close()
         conn.close()
-        return errores(404,"Partido no existente","Not Found")
+        return errores(404, "Partido no existente", "Not Found")
     
-    campos_requeridos = ["local","visitante"]
-
+    campos_requeridos = ["local", "visitante"]
     for campo in campos_requeridos:
         if campo not in datos:
-             cursor.close()
-             conn.close()
-             return errores(400,"Falta completar alguno de los campos","Bad Request")
-
+            cursor.close()
+            conn.close()
+            return errores(400, "Falta completar alguno de los campos", "Bad Request")
 
     goles_local_nuevo = datos.get("local")
     goles_visitante_nuevo = datos.get("visitante")
 
-    if not es_gol_valido(goles_local_nuevo,goles_visitante_nuevo) or goles_local_nuevo < 0 or goles_visitante_nuevo < 0:
+    if not es_gol_valido(goles_local_nuevo, goles_visitante_nuevo) or goles_local_nuevo < 0 or goles_visitante_nuevo < 0:
         cursor.close()
         conn.close()
-        return errores(400, "Error en el formato de los goles > 0 y de tipo entero", "Bad Request")
-    
-    
-    cursor.execute("""
-                   UPDATE partidos SET goles_local = %s, goles_visitante = %s
-                   WHERE id = %s """,(goles_local_nuevo,goles_visitante_nuevo,id_a_actualizar))
-    
+        return errores(400, "Error en el formato de los goles", "Bad Request")
+
+    cursor.execute("""UPDATE partidos SET goles_local = %s, goles_visitante = %s WHERE id = %s""",
+                   (goles_local_nuevo, goles_visitante_nuevo, id_a_actualizar))
     conn.commit()
+
+    cursor.execute("SELECT * FROM predicciones WHERE id_partido = %s", (id_a_actualizar,))
+    prediccion = cursor.fetchone()
+    cursor.execute("""SELECT * FROM ranking WHERE id_usuario=%s""",(prediccion["id_usuario"],))
+    ranking= cursor.fetchone()
+    actualizar_puntos(prediccion["id_usuario"], id_a_actualizar, ranking["puntos"])
+
     cursor.close()
     conn.close()
-
     return "", 204
 
 

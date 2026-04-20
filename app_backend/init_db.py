@@ -16,6 +16,5 @@ for statement in sql.split(";"):
         cursor.execute(statement)
         conn.commit()
         print("Statement executed")
-
 cursor.close()
 conn.close()

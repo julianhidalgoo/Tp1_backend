@@ -58,19 +58,35 @@ def es_gol_valido(goles_local,goles_visitante):
         return True
     return False
 
-def actualizar_puntos(id_usuario,id_partido):
+def calcular_puntos(pred_local, pred_visitante, real_local, real_visitante):
+    if pred_local == real_local and pred_visitante == real_visitante:
+        return 3
+    elif pred_local > pred_visitante and real_local > real_visitante:
+        return 1
+    elif pred_local < pred_visitante and real_local < real_visitante:
+        return 1
+    else:
+        return 0
+
+def actualizar_puntos(id_usuario, id_partido, puntos):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""SELECT * FROM predicciones WHERE id_usuario=%s""", (id_usuario,))
-    predicciones= cursor.fetchone()
-    cursor.execute("""SELECT goles_local, goles_visitante FROM partidos WHERE id=%s""", (id_partido,))
-    resultado_final= cursor.fetchone()
+    cursor.execute("SELECT * FROM predicciones WHERE id_usuario=%s AND id_partido=%s", (id_usuario, id_partido))
+    prediccion = cursor.fetchone()
 
-    if (predicciones["goles_local"] == resultado_final["goles_local"]) and (predicciones["goles_visitante"] == resultado_final["goles_visitante"]):
-        cursor.execute("""UPDATE ranking SET puntos=3 WHERE id_usuario=%s""", (id_usuario,))
-        cursor.commit()
-    return 204
+    cursor.execute("SELECT goles_local, goles_visitante FROM partidos WHERE id=%s", (id_partido,))
+    resultado = cursor.fetchone()
+
+    puntos = puntos + calcular_puntos(
+        prediccion["goles_local"], prediccion["goles_visitante"],
+        resultado["goles_local"], resultado["goles_visitante"]
+    )
+
+    cursor.execute("UPDATE ranking SET puntos = %s WHERE id_usuario=%s", (puntos, id_usuario))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 
 

@@ -91,14 +91,18 @@ def obtener_usuario_por_id(id):
         cursor = conn.cursor(dictionary=True)
     except:
         return errores(500, "Error interno con la base de datos", "Internal server error")
-   
-    if type(id)!= int or id <= 0:
-        return errores(404,"No se encuentra la URL", "Not Found")
-
+    
+    try:
+        id = int(id)
+    except:
+        return errores(400,"Formato de URL Invalido", "Bad Request")
+    
     es_valido = es_id_valido_usuarios(id)
     
     if not es_valido:
-        return errores(400, "No se encontró el usuario", "Bad Request")
+        cursor.close()
+        conn.close()
+        return errores(404, "No se encontró el usuario", "Not Found")
     
     cursor.execute("SELECT * FROM usuarios WHERE id = %s",(id,))
     usuario_existe= cursor.fetchone()
@@ -118,15 +122,14 @@ def reemplazar_usuario_por_id(id):
     datos = request.json
     
     campos_requeridos = ["nombre","email"]
-
+    nombre = datos.get("nombre")
+    email = datos.get("email")
+    
     for campo in campos_requeridos:
-        if campo not in datos:
+        if campo not in datos or nombre == "" or email== "":
             cursor.close()
             conn.close()
             return errores(400,"Falta Completar algun campo","Bad Request")
-    
-    nombre = datos.get("nombre")
-    email = datos.get("email")
 
     cursor.execute("""
                         SELECT 1 FROM usuarios WHERE email = %s AND nombre = %s
@@ -151,14 +154,16 @@ def borrar_usuario(id):
     except:
         return errores(500, "Error interno con la base de datos", "Internal server error")
     
-    if type(id)!= int or id <= 0:
-       return errores(404,"No se encuentra la URL", "Not Found")
+    try:
+        id= int(id)
+    except:
+        return errores(400,"Formato de URL Invalido", "Bad Request")
 
     es_valido = es_id_valido_usuarios(id)
     
     if not es_valido:
-        return errores(400, "No se encontró el usuario", "Bad Request")
-   
+        return errores(404, "No se encontró el usuario", "Not Found")
+    
     cursor.execute("""DELETE FROM usuarios WHERE id = %s""",(id,))
     conn.commit()
     cursor.close()

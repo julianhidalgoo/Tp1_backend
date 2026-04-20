@@ -6,7 +6,7 @@ with open("app_backend/init_db.sql") as f:
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="root"
+    password="Root123!"
 )
 
 cursor = conn.cursor()

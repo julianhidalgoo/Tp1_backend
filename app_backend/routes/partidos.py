@@ -355,4 +355,4 @@ def registrar_prediccion(id):
 
     return jsonify({"id_usuario": id_usuario,
                     "local": pred_local,
-                    "visitante": pred_visitante}), 201
+                    "visitante": pred_visitante }), 201

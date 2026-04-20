@@ -170,4 +170,3 @@ def borrar_usuario(id):
     conn.close()
    
     return "",204
-    

@@ -58,5 +58,19 @@ def es_gol_valido(goles_local,goles_visitante):
         return True
     return False
 
+def actualizar_puntos(id_usuario,id_partido):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""SELECT * FROM predicciones WHERE id_usuario=%s""", (id_usuario,))
+    predicciones= cursor.fetchone()
+    cursor.execute("""SELECT goles_local, goles_visitante FROM partidos WHERE id=%s""", (id_partido,))
+    resultado_final= cursor.fetchone()
+
+    if (predicciones["goles_local"] == resultado_final["goles_local"]) and (predicciones["goles_visitante"] == resultado_final["goles_visitante"]):
+        cursor.execute("""UPDATE ranking SET puntos=3 WHERE id_usuario=%s""", (id_usuario,))
+        cursor.commit()
+    return 204
+
 
 

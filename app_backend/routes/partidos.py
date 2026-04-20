@@ -1,6 +1,6 @@
 from flask import Blueprint,jsonify,request
 from app_backend.db import get_connection
-from app_backend.routes.auxiliar import es_id_valido, es_id_valido_usuarios,errores,es_gol_valido
+from app_backend.routes.auxiliar import es_id_valido, es_id_valido_usuarios,errores,es_gol_valido,actualizar_puntos
 
 partidos_bp = Blueprint("partidos", __name__)
 
@@ -161,9 +161,7 @@ def reemplazar_partido(id_buscado):
     fase_nueva = datos.get("fase")
 
     
-    cursor.execute("""
-                   UPDATE partidos SET equipo_local = %s, equipo_visitante = %s, fecha = %s, fase = %s
-                   WHERE id = %s """,(local_nuevo,visitante_nuevo,fecha_nueva,fase_nueva,id_buscado))
+    cursor.execute("""UPDATE partidos SET equipo_local = %s, equipo_visitante = %s, fecha = %s, fase = %s WHERE id = %s """,(local_nuevo,visitante_nuevo,fecha_nueva,fase_nueva,id_buscado))
     
     conn.commit()
     cursor.close()
@@ -186,10 +184,11 @@ def actualizar_partido_parcialmente(id_buscado):
         conn.close()
         return errores(404,"Id no encontrado","Not found")
 
+    cursor.execute("""SELECT * FROM predicciones WHERE id_partido=%s""", (id_buscado,))
+    prediccion= cursor.fetchone()
     campos_posibles = ["equipo_local","equipo_visitante","fecha","fase"]
 
-    claves = []
-    valores = []
+    campos_requeridos=["id","equipo_local","equipo_visitante","fecha","fase","goles_local"]
 
     for campo in campos_posibles:
         if campo in datos:
@@ -208,6 +207,8 @@ def actualizar_partido_parcialmente(id_buscado):
 
     cursor.execute(instruccion_a_ejecutar, valores)
     conn.commit()
+    if prediccion["hizo_prediccion"]==1:
+        return "", actualizar_puntos(prediccion["id_usuario"], id_buscado)
 
     cursor.close()
     conn.close()
@@ -228,8 +229,7 @@ def eliminar_partido(id_a_eliminar):
         conn.close()
         return errores(404,"Partido no existente","Not Found")
     
-    cursor.execute("""
-                   DELETE FROM partidos WHERE id = %s """,(id_a_eliminar,))
+    cursor.execute("""DELETE FROM partidos WHERE id = %s """,(id_a_eliminar,))
     
     conn.commit()
     cursor.close()
@@ -302,57 +302,33 @@ def registrar_prediccion(id):
 
     # Verifico si el partido existe y si ya se jugo
     # Tuve que sacar es_id_valido pq tambien tenia que trabajar con el resultado del partido
-    cursor.execute("SELECT goles_local, goles_visitante FROM partidos WHERE id = %s", (id,))
+    cursor.execute("SELECT goles_local FROM partidos WHERE id = %s", (id,))
     partido = cursor.fetchone()
+    local= datos.get("local")
+    visitante= datos.get("visitante")
 
     if not partido:
         return errores(404, "Partido no encontrado", "Not Found")
-    
-    if partido["goles_local"] is not None:
-        return errores(400, "Acción no permitida, Partido Finalizado.", "Bad Request")
-    
-    id_usuario = datos.get("id_usuario")
-    if not es_id_valido_usuarios(id_usuario):
-        cursor.close()
-        conn.close()
-        return errores(404, "Usuario inexistente", "Not found")
-    
-    local = datos.get("local")
-    visitante = datos.get("visitante")
 
-    cursor.execute("""
-                    SELECT * FROM partidos WHERE goles_local IS NULL AND id = %s
-
-                    """,(id,)
-    )
-    
+    cursor.execute("""SELECT * FROM partidos WHERE goles_local IS NULL AND id = %s""", (id,))
     partido_no_jugado = cursor.fetchone()
-
     if not partido_no_jugado:
         return errores(400, "Partido Finalizado", "Bad request")
-    
-    cursor.execute("""
-                    SELECT * FROM predicciones WHERE hizo_prediccion = 1 AND id_usuario = %s AND id_partido = %s
-                   """ ,(id_usuario,id,)
-    )
-        
-    pred_visitante = datos.get("visitante")
-    pred_local = datos.get("local")
 
-    #Verifico si ya existe una predicción
-    cursor.execute("SELECT 1 FROM predicciones WHERE id_usuario = %s AND id_partido = %s", (id_usuario, id))
+
+    id_usuario = datos.get("id_usuario")
+    if not es_id_valido_usuarios(id_usuario):
+        return errores(404, "Usuario inexistente", "Not Found")
+
+    cursor.execute("SELECT 1 FROM predicciones WHERE id_usuario = %s AND id_partido = %s", (id_usuario, id,))
     if cursor.fetchone():
-        return errores(409, "El usuario ya realizó una predicción para este partido", "Conflict")
-    
-    #Inserto la prediccion
+        return errores(409, "El usuario ya realizó una predicción en este partido", "Conflict")
+
     cursor.execute("""
-            INSERT INTO predicciones (id_usuario, id_partido, goles_local, goles_visitante, hizo_prediccion)
-            VALUES (%s, %s, %s, %s, 1)
-        """, (id_usuario, id, pred_local, pred_visitante))
+        INSERT INTO predicciones (id_usuario, id_partido, goles_local, goles_visitante, hizo_prediccion)
+        VALUES (%s, %s, %s, %s, 1)""", (id_usuario, id, local, visitante,))
     conn.commit()
     cursor.close()
     conn.close()
 
-    return jsonify({"id_usuario": id_usuario,
-                    "local": pred_local,
-                    "visitante": pred_visitante }), 201
+    return "", 201

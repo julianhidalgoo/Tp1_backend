@@ -10,7 +10,7 @@ def listar_partidos():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
 
     limit= request.args.get("_limit", 10, type=int)
     offset= request.args.get("_offset", 0, type=int)
@@ -75,7 +75,7 @@ def crear_partidos():
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
     datos = request.json
   
     campos_requeridos = ["equipo_local","equipo_visitante","fecha","fase"]
@@ -119,7 +119,7 @@ def buscar_partido_id(id):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
 
     cursor.execute("SELECT * FROM partidos WHERE id = %s",(id,))
     partido = cursor.fetchone()
@@ -128,6 +128,8 @@ def buscar_partido_id(id):
     conn.close()
     
     if not partido:
+        cursor.close()
+        conn.close()
         return errores(404,"Partido no encontrado","Not Found")
     return jsonify(partido), 200
 
@@ -138,7 +140,7 @@ def reemplazar_partido(id_buscado):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
     datos = request.json
 
     if not es_id_valido(id_buscado):
@@ -201,9 +203,11 @@ def actualizar_partido_parcialmente(id_buscado):
 
     valores.append(id_buscado)
     cursor.execute(f"UPDATE partidos SET {', '.join(claves)} WHERE id = %s", valores)
+    
     conn.commit()
     cursor.close()
     conn.close()
+
     return "", 204
 
     
@@ -214,7 +218,7 @@ def eliminar_partido(id_a_eliminar):
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
     except Exception:
-        errores(500, "Error interno con la base de datos", "Internal server error")
+        return errores(500, "Error interno con la base de datos", "Internal server error")
 
     if not es_id_valido(id_a_eliminar):
         cursor.close()
@@ -302,25 +306,34 @@ def registrar_prediccion(id):
     visitante= datos.get("visitante")
 
     if not partido:
+        cursor.close()
+        conn.close()
         return errores(404, "Partido no encontrado", "Not Found")
 
     cursor.execute("""SELECT * FROM partidos WHERE goles_local IS NULL AND id = %s""", (id,))
     partido_no_jugado = cursor.fetchone()
     if not partido_no_jugado:
+        cursor.close()
+        conn.close()
         return errores(400, "Partido Finalizado", "Bad request")
 
 
     id_usuario = datos.get("id_usuario")
     if not es_id_valido_usuarios(id_usuario):
+        cursor.close()
+        conn.close()
         return errores(404, "Usuario inexistente", "Not Found")
 
     cursor.execute("SELECT 1 FROM predicciones WHERE id_usuario = %s AND id_partido = %s", (id_usuario, id,))
     if cursor.fetchone():
+        cursor.close()
+        conn.close()        
         return errores(409, "El usuario ya realizó una predicción en este partido", "Conflict")
 
     cursor.execute("""
         INSERT INTO predicciones (id_usuario, id_partido, goles_local, goles_visitante, hizo_prediccion)
         VALUES (%s, %s, %s, %s, 1)""", (id_usuario, id, local, visitante,))
+    
     conn.commit()
     cursor.close()
     conn.close()
